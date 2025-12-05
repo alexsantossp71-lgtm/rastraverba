@@ -9,7 +9,7 @@ type DuckDBState = {
     error: Error | null;
 };
 
-const PARQUET_URL = process.env.NEXT_PUBLIC_DATA_URL || "/data/emendas_rastreadas.parquet";
+const PARQUET_URL = process.env.NEXT_PUBLIC_DATA_URL || "/data/emendas.parquet";
 
 export function useDuckDB() {
     const [state, setState] = useState<DuckDBState>({

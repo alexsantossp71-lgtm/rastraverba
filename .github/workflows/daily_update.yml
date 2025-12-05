@@ -1,0 +1,70 @@
+name: Daily Data Update
+
+on:
+  schedule:
+    # Runs at 4 AM UTC daily
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+    inputs:
+      dry_run:
+        description: 'Generate sample data instead of fetching APIs'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run ETL Pipeline
+        env:
+          TRANSFARENCY_API_KEY: ${{ secrets.TRANSFARENCY_API_KEY }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            python etl/main.py --dry-run --verbose
+          else
+            python etl/main.py --verbose
+          fi
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --quiet data/*.parquet 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data/*.parquet
+          git commit -m "Auto-update data - $(date +'%Y-%m-%d %H:%M:%S UTC')"
+          git push
+
+      - name: No changes detected
+        if: steps.check_changes.outputs.changed == 'false'
+        run: echo "No changes in data files, skipping commit."

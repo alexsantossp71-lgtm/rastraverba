@@ -39,7 +39,7 @@ jobs:
 
       - name: Run ETL Pipeline
         env:
-          TRANSFARENCY_API_KEY: ${{ secrets.TRANSFARENCY_API_KEY }}
+          API_TRANSPARENCIA_KEY: ${{ secrets.API_TRANSPARENCIA_KEY }}
         run: |
           if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
             python etl/main.py --dry-run --verbose
